@@ -45,7 +45,6 @@
             tabSwitchDetection: true,
             extensionCheck: true,
             developerToolsCheck: true,
-            screenSharingCheck: true,
             copyPasteBlocked: true
         };
 
@@ -73,38 +72,37 @@
             });
         }
 
-        // Detect extensions
-        function detectExtensions() {
-            const extensionElement = document.querySelector('[data-ext-id]');
-            if (extensionElement) {
-                alert("Browser extension detected! Please disable it for the exam.");
-            }
-        }
-
-        // Prevent Tab Switching by monitoring visibility
+        // Actively block tab switching by refocusing or reloading
         function preventTabSwitching() {
-            let tabSwitchCount = 0;
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'hidden') {
-                    tabSwitchCount++;
-                    if (tabSwitchCount > 1) {
-                        alert("Multiple tab switches detected. Exam terminated.");
-                    }
+                    alert("Tab switching is not allowed. You must stay on this page.");
+                    location.reload(); // Forces page refresh if user switches tabs
                 }
             });
         }
 
-        // Block Developer Tools
+        // Block Developer Tools by constant checking
         function detectDevTools() {
             const widthThreshold = 100;
             const heightThreshold = 100;
-            const detectDevToolsInterval = setInterval(() => {
+            setInterval(() => {
                 if (window.outerWidth - window.innerWidth > widthThreshold ||
                     window.outerHeight - window.innerHeight > heightThreshold) {
-                    alert("Developer tools detected. Exam terminated.");
-                    clearInterval(detectDevToolsInterval);
+                    alert("Developer tools are not allowed during the exam.");
+                    location.reload(); // Reload the page if developer tools are detected
                 }
             }, 1000);
+        }
+
+        // Block Extension Use by Frequent Alerts
+        function detectExtensions() {
+            const extensionElement = document.querySelector('[data-ext-id]');
+            if (extensionElement) {
+                setInterval(() => {
+                    alert("Extensions are not allowed. Please disable them to continue.");
+                }, 3000); // Display alerts every few seconds to disrupt usage
+            }
         }
 
         // Disable Copy-Paste and Right Click
