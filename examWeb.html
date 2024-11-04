@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Secure Online Exam Portal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        /* Fullscreen backdrop */
+        :fullscreen::backdrop {
+            background-color: white;
+        }
+
+        *:fullscreen, *:-webkit-full-screen, *:-moz-full-screen {
+            background-color: white;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .exam-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 400px;
+            text-align: center;
+        }
+
+        #alert {
+            color: red;
+            display: none;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .button {
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            margin: 10px;
+            transition: background-color 0.3s;
+        }
+
+        #startButton {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        #endButton {
+            background-color: #f44336;
+            color: white;
+            display: none;
+        }
+
+        #examContent {
+            display: none;
+            text-align: left;
+            margin-top: 20px;
+        }
+
+        #fullscreenMessage {
+            display: none;
+            margin-top: 10px;
+            color: #555;
+            font-size: 14px;
+        }
+
+        #customAlert {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            z-index: 1000;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            width: 300px;
+            text-align: center;
+        }
+
+        #customAlert button {
+            margin-top: 10px;
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="exam-container">
+        <h2>Online Exam Portal</h2>
+        <div id="initialContent">
+            <p>Click "Start Exam" to begin in full-screen mode.</p>
+            <button id="startButton" class="button">Start Exam</button>
+        </div>
+        
+        <div id="examContent">
+            <p>Answer the following questions carefully:</p>
+            <div id="questions">
+                <input rows="10" cols="50" placeholder="Type your answers here..."></input>
+            </div>
+            <button id="endButton" class="button">End Exam</button>
+        </div>
+        <div id="alert"></div>
+    </div>
+
+    <div id="customAlert">
+        <p id="alertMessage"></p>
+        <button id="alertCloseButton">OK</button>
+    </div>
+
+    <script>
+        // DOM Elements
+        const startButton = document.getElementById('startButton');
+        const endButton = document.getElementById('endButton');
+        const examContent = document.getElementById('examContent');
+        const initialContent = document.getElementById('initialContent');
+        const customAlert = document.getElementById('customAlert');
+        const alertMessage = document.getElementById('alertMessage');
+        const alertCloseButton = document.getElementById('alertCloseButton');
+
+        // State Variables
+        let examActive = false;
+        let isExiting = false;
+
+        // Security Configuration
+        const securityConfig = {
+            screenshotPrevention: true,
+            tabSwitchDetection: true,
+            extensionCheck: true,
+            developerToolsCheck: true,
+            copyPasteBlocked: true,
+            escKeyBlocked: true
+        };
+
+        // Request Full-Screen Mode
+        async function requestFullScreen() {
+            try {
+                const elem = document.documentElement;
+                if (elem.requestFullscreen) {
+                    await elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    await elem.webkitRequestFullscreen();
+                } else if (elem.msRequestFullscreen) {
+                    await elem.msRequestFullscreen();
+                }
+                startExam();
+            } catch (err) {
+                showAlert("Full-screen mode is required for the exam. Please try again.");
+            }
+        }
+
+        // Start the Exam
+        function startExam() {
+            examActive = true;
+            startButton.style.display = 'none';
+            initialContent.style.display = 'none';
+            examContent.style.display = 'block';
+            endButton.style.display = 'inline-block';
+            initializeSecurity();
+        }
+
+        // End the Exam
+        function endExam() {
+            if (confirm("Are you sure you want to end the exam?")) {
+                isExiting = true;
+                examActive = false;
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                }
+                location.reload();
+            }
+        }
+
+        // Show Alert
+        function showAlert(message) {
+            alertMessage.textContent = message;
+            customAlert.style.display = 'block';
+        }
+
+        // Close Alert Button Event Listener
+        alertCloseButton.addEventListener('click', () => {
+            customAlert.style.display = 'none';
+            if (examActive && !document.fullscreenElement && !isExiting) {
+                requestFullScreen();
+            }
+        });
+
+        // Security Features
+        function preventScreenshots() {
+            document.addEventListener("keyup", (e) => {
+                if (e.key === "PrintScreen") {
+                    navigator.clipboard.writeText("");
+                    showAlert("Screenshots are not allowed.");
+                }
+            });
+        }
+
+        function preventTabSwitching() {
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden' && examActive) {
+                    showAlert("Tab switching is not allowed during the exam.");
+                }
+            });
+        }
+
+        function detectDevTools() {
+            const threshold = 160;
+            setInterval(() => {
+                if (examActive) {
+                    const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+                    const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+                    if (widthThreshold || heightThreshold) {
+                        showAlert("Developer tools are not allowed during the exam.");
+                    }
+                }
+            }, 1000);
+        }
+
+        function detectExtensions() {
+            // Simulated extension detection logic
+            const extensionElement = document.querySelector('[data-ext-id]');
+            if (extensionElement && examActive) {
+                showAlert("Please disable browser extensions before starting the exam.");
+            }
+        }
+
+        function blockCopyPasteAndRightClick() {
+            document.addEventListener('copy', (e) => examActive && e.preventDefault());
+            document.addEventListener('cut', (e) => examActive && e.preventDefault());
+            document.addEventListener('paste', (e) => examActive && e.preventDefault());
+            document.addEventListener('contextmenu', (e) => examActive && e.preventDefault());
+        }
+
+        function handleKeyboardShortcuts(event) {
+            if (examActive && !isExiting) {
+                // Block ESC key
+                if (event.key === "Escape") {
+                    event.preventDefault();
+                    showAlert("Full-screen mode is required for the exam.");
+                    return false;
+                }
+
+                // Block F11, F12, and developer tools shortcuts, along with Windows, Alt, Ctrl, and Shift combinations
+                const blockedKeys = [
+                    "F11", "F12", "Meta", // Windows key
+                    "Alt", "Control", "Shift"
+                ];
+                if (blockedKeys.includes(event.key) || 
+                    (event.ctrlKey && ["C", "I", "V", "X", "S"].includes(event.key)) || 
+                    (event.shiftKey && ["I", "C"].includes(event.key)) ||
+                    (event.ctrlKey && event.shiftKey && ["I", "J", "C"].includes(event.key)) ||
+                    (event.altKey && event.key === "Tab")
+                ) {
+                    event.preventDefault();
+                    showAlert("This action is not allowed during the exam.");
+                    return false;
+                }
+            }
+        }
+
+        // Initialize Security Features
+        function initializeSecurity() {
+            if (securityConfig.screenshotPrevention) preventScreenshots();
+            if (securityConfig.tabSwitchDetection) preventTabSwitching();
+            if (securityConfig.extensionCheck) detectExtensions();
+            if (securityConfig.developerToolsCheck) detectDevTools();
+            if (securityConfig.copyPasteBlocked) blockCopyPasteAndRightClick();
+            if (securityConfig.escKeyBlocked) {
+                document.addEventListener("keydown", handleKeyboardShortcuts, true);
+            }
+        }
+
+        // Event Listeners
+        startButton.addEventListener('click', requestFullScreen);
+        endButton.addEventListener('click', endExam);
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                if (!isExiting) {
+                    showAlert("You must stay in full-screen mode during the exam.");
+                }
+            }
+        });
+        function preventScreenshots() {
+            document.addEventListener("keyup", (e) => {
+                if (e.key === "PrintScreen") {
+                    // Apply blur effect to the body
+                    document.body.style.filter = 'blur(10px)';
+                    navigator.clipboard.writeText(""); // Clear clipboard to prevent capturing
+                    // showAlert("Screenshots are not allowed.");
+                    // Remove the blur effect after 5 seconds
+                    setTimeout(() => {
+                        document.body.style.filter = 'none';
+                    }, 2000); // Remove blur after 5000 milliseconds (5 seconds)
+                }
+            });
+        }
+
+        // Call this function periodically during the exam
+        setInterval(checkForExtensions, 5000); // Check every 5 seconds
+    </script>
+</body>
+</html>

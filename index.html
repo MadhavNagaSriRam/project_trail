@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Secure Online Exam Portal</title>
+    <title>Exam Portal - Guest Mode Launch</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -18,112 +18,341 @@
             padding: 30px;
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            width: 400px;
-        }
-        #alert {
-            color: red;
-            display: none;
-            margin-top: 15px;
+            width: 500px;
             text-align: center;
+        }
+        .button {
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            margin: 10px;
+            background-color: #4CAF50;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .instructions {
+            text-align: left;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin: 8px 0;
+            line-height: 1.4;
+        }
+        #browserInfo {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #666;
+        }
+        .keyboard-shortcut {
+            background-color: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        #directLaunch, #manualLaunch {
+            display: none;
+        }
+        .warning {
+            color: #721c24;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
     <div class="exam-container">
-        <h2>Online Exam Portal</h2>
-        <p>Answer the following questions carefully:</p>
-        <div id="questions">
-            <!-- Exam questions will go here -->
+        <h2>Secure Exam Portal</h2>
+        
+        <div class="instructions">
+            <h3>Launch Options</h3>
+            <div id="directLaunch">
+                <button id="startButton" class="button">Start Exam in Guest Mode</button>
+                <p class="warning">Note: If the exam doesn't open in guest mode, please use the manual launch method below.</p>
+            </div>
+            
+            <div id="manualLaunch">
+                <h4>Manual Launch Instructions:</h4>
+                <ol>
+                    <li>Open a new guest/incognito window:
+                        <ul>
+                            <li>Chrome: Press <span class="keyboard-shortcut">Ctrl + Shift + N</span></li>
+                            <li>Firefox: Press <span class="keyboard-shortcut">Ctrl + Shift + P</span></li>
+                            <li>Safari: Press <span class="keyboard-shortcut">Command + Shift + N</span></li>
+                        </ul>
+                    </li>
+                    <li>Copy this URL:</li>
+                    <input type="text" id="examUrl" readonly style="width: 100%; padding: 8px; margin: 10px 0;" />
+                    <li>Paste the URL in the guest/incognito window</li>
+                </ol>
+                <button id="copyButton" class="button">Copy Exam URL</button>
+            </div>
         </div>
-        <div id="alert"></div>
+        
+        <div id="browserInfo"></div>
     </div>
 
     <script>
-        // Security configuration
-        const securityConfig = {
-            screenshotPrevention: true,
-            tabSwitchDetection: true,
-            extensionCheck: true,
-            developerToolsCheck: true,
-            copyPasteBlocked: true
-        };
+        const examUrl = window.location.origin + '/project_trail/index.html'; // Replace with your actual exam page URL
+        const startButton = document.getElementById('startButton');
+        const copyButton = document.getElementById('copyButton');
+        const examUrlInput = document.getElementById('examUrl');
+        const directLaunch = document.getElementById('directLaunch');
+        const manualLaunch = document.getElementById('manualLaunch');
+        const browserInfo = document.getElementById('browserInfo');
 
-        // Enforce full-screen mode
-        function requestFullScreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
-            }
+        // Detect browser
+        function detectBrowser() {
+            const userAgent = navigator.userAgent;
+            if (userAgent.includes("Chrome")) return "Chrome";
+            if (userAgent.includes("Firefox")) return "Firefox";
+            if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) return "Safari";
+            return "Unknown";
         }
 
-        document.addEventListener("fullscreenchange", () => {
-            if (!document.fullscreenElement) {
-                alert("Please remain in full-screen mode during the exam.");
-                requestFullScreen();
+        // Set up the page based on browser
+        function initializePage() {
+            const browser = detectBrowser();
+            examUrlInput.value = examUrl;
+            
+            // Show both launch methods
+            directLaunch.style.display = 'block';
+            manualLaunch.style.display = 'block';
+            
+            browserInfo.textContent = `Detected browser: ${browser}`;
+        }
+
+        // Attempt to open in guest/incognito mode
+        startButton.addEventListener('click', () => {
+            // Chrome-specific approach
+            const chromeGuestUrl = `chrome://guest?url=${encodeURIComponent(examUrl)}`;
+            
+            // Try multiple approaches
+            try {
+                // Attempt 1: Try chrome://guest URL
+                window.open(chromeGuestUrl, '_blank');
+                
+                // Attempt 2: Try regular incognito mode
+                window.open(examUrl, '_blank', 'incognito=yes');
+                
+            } catch (error) {
+                alert('Unable to directly open guest mode. Please use the manual launch method below.');
             }
         });
 
-        // Prevent Screenshots by disabling PrintScreen and clearing clipboard
-        function preventScreenshots() {
-            document.addEventListener("keyup", (e) => {
-                if (e.key === "PrintScreen") {
-                    navigator.clipboard.writeText(""); // Clear clipboard content
-                    alert("Screenshots are not allowed.");
-                }
-            });
-        }
+        // Copy URL functionality
+        copyButton.addEventListener('click', () => {
+            examUrlInput.select();
+            document.execCommand('copy');
+            copyButton.textContent = 'URL Copied!';
+            setTimeout(() => {
+                copyButton.textContent = 'Copy Exam URL';
+            }, 2000);
+        });
 
-        // Actively block tab switching by refocusing or reloading
-        function preventTabSwitching() {
-            document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'hidden') {
-                    alert("Tab switching is not allowed. You must stay on this page.");
-                    location.reload(); // Forces page refresh if user switches tabs
-                }
-            });
-        }
+        // Initialize the page
+        initializePage();
+    </script>
+</body>
+</html> -->
 
-        // Block Developer Tools by constant checking
-        function detectDevTools() {
-            const widthThreshold = 100;
-            const heightThreshold = 100;
-            setInterval(() => {
-                if (window.outerWidth - window.innerWidth > widthThreshold ||
-                    window.outerHeight - window.innerHeight > heightThreshold) {
-                    alert("Developer tools are not allowed during the exam.");
-                    location.reload(); // Reload the page if developer tools are detected
-                }
-            }, 1000);
-        }
 
-        // Block Extension Use by Frequent Alerts
-        function detectExtensions() {
-            const extensionElement = document.querySelector('[data-ext-id]');
-            if (extensionElement) {
-                setInterval(() => {
-                    alert("Extensions are not allowed. Please disable them to continue.");
-                }, 3000); // Display alerts every few seconds to disrupt usage
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Exam Portal - Direct Incognito Launch</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .exam-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 500px;
+            text-align: center;
+        }
+        .button {
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            margin: 10px;
+            background-color: #4CAF50;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .button.secondary {
+            background-color: #6c757d;
+        }
+        .button.secondary:hover {
+            background-color: #5a6268;
+        }
+        .instructions {
+            text-align: left;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+        }
+        .keyboard-shortcut {
+            background-color: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .fallback {
+            display: none;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+        .url-input {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .warning {
+            color: #856404;
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="exam-container">
+        <h2>Secure Exam Portal</h2>
+        
+        <div class="instructions">
+            <h3>Launch Exam in Incognito Mode</h3>
+            <p class="warning">Note: If automatic launch fails, manual instructions will appear below.</p>
+            
+            <button id="launchButton" class="button">Launch in Incognito Mode</button>
+            
+            <div id="fallback" class="fallback">
+                <h4>Manual Launch Instructions:</h4>
+                <ol>
+                    <li>Open a new incognito/private window:
+                        <ul>
+                            <li>Chrome: Press <span class="keyboard-shortcut">Ctrl + Shift + N</span></li>
+                            <li>Firefox: Press <span class="keyboard-shortcut">Ctrl + Shift + P</span></li>
+                            <li>Safari: Press <span class="keyboard-shortcut">Command + Shift + N</span></li>
+                            <li>Edge: Press <span class="keyboard-shortcut">Ctrl + Shift + N</span></li>
+                        </ul>
+                    </li>
+                    <li>Copy this URL:</li>
+                    <input type="text" id="examUrl" class="url-input" readonly />
+                    <li>Paste the URL in the incognito/private window</li>
+                </ol>
+                <button id="copyButton" class="button secondary">Copy Exam URL</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const examUrl = window.location.origin + '/project_trail/examWeb.html';
+        const launchButton = document.getElementById('launchButton');
+        const fallback = document.getElementById('fallback');
+        const copyButton = document.getElementById('copyButton');
+        const examUrlInput = document.getElementById('examUrl');
+
+        // Attempt to launch incognito window
+        async function attemptIncognitoLaunch() {
+            try {
+                // Try multiple approaches
+                const approaches = [
+                    // Chrome approach
+                    () => window.open('chrome://guest?url=' + encodeURIComponent(examUrl)),
+                    // General incognito attempt
+                    () => window.open(examUrl, '_blank', 'incognito=yes'),
+                    // Firefox private window attempt
+                    () => window.open(examUrl, '_blank', 'private=yes'),
+                    // Edge InPrivate attempt
+                    () => window.open(examUrl, '_blank', 'private=true')
+                ];
+
+                // Try each approach
+                for (const approach of approaches) {
+                    const window = approach();
+                    if (window) {
+                        return true;
+                    }
+                }
+                
+                return false;
+            } catch (error) {
+                return false;
             }
         }
 
-        // Disable Copy-Paste and Right Click
-        function blockCopyPasteAndRightClick() {
-            document.addEventListener('copy', (e) => e.preventDefault());
-            document.addEventListener('cut', (e) => e.preventDefault());
-            document.addEventListener('paste', (e) => e.preventDefault());
-            document.addEventListener('contextmenu', (e) => e.preventDefault());
+        // Initialize the page
+        function initializePage() {
+            examUrlInput.value = examUrl;
         }
 
-        // Initialize all security measures
-        function initializeSecurity() {
-            requestFullScreen();
-            if (securityConfig.screenshotPrevention) preventScreenshots();
-            if (securityConfig.tabSwitchDetection) preventTabSwitching();
-            if (securityConfig.extensionCheck) detectExtensions();
-            if (securityConfig.developerToolsCheck) detectDevTools();
-            if (securityConfig.copyPasteBlocked) blockCopyPasteAndRightClick();
-        }
+        // Launch button click handler
+        launchButton.addEventListener('click', async () => {
+            const success = await attemptIncognitoLaunch();
+            
+            if (!success) {
+                fallback.style.display = 'block';
+                launchButton.textContent = 'Automatic Launch Failed';
+                launchButton.disabled = true;
+            }
+        });
 
-        window.onload = initializeSecurity;
+        // Copy button click handler
+        copyButton.addEventListener('click', () => {
+            examUrlInput.select();
+            document.execCommand('copy');
+            copyButton.textContent = 'URL Copied!';
+            setTimeout(() => {
+                copyButton.textContent = 'Copy Exam URL';
+            }, 2000);
+        });
+
+        initializePage();
     </script>
 </body>
 </html>
